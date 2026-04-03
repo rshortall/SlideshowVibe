@@ -71,7 +71,7 @@ final class SlideshowViewController: NSViewController {
             gridView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             gridView.heightAnchor.constraint(equalTo: container.heightAnchor, multiplier: 0.60),
 
-            reflectionView.topAnchor.constraint(equalTo: gridView.bottomAnchor),
+            reflectionView.topAnchor.constraint(equalTo: gridView.bottomAnchor, constant: PhotoGridView.gap),
             reflectionView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
             reflectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
             reflectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),

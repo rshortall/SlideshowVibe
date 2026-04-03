@@ -30,7 +30,7 @@ final class PhotoGridView: NSView {
 
     // MARK: Configuration
     static let rowCount = 3
-    static let gap: CGFloat = 4
+    static let gap: CGFloat = 8
     static let placeholderAspect: CGFloat = 1.5
 
     // MARK: Callbacks
@@ -68,7 +68,10 @@ final class PhotoGridView: NSView {
         }
     }
 
-    private var rowHeight: CGFloat { bounds.height / CGFloat(PhotoGridView.rowCount) }
+    private var rowHeight: CGFloat {
+        let totalGaps = CGFloat(PhotoGridView.rowCount - 1) * PhotoGridView.gap
+        return (bounds.height - totalGaps) / CGFloat(PhotoGridView.rowCount)
+    }
 
     // MARK: Init
 
@@ -195,7 +198,7 @@ final class PhotoGridView: NSView {
             let rowLayer = rowLayersList[row]
             let layout = layouts[row]
             // Row 0 is topmost visually → highest y in non-flipped AppKit/CALayer coords
-            let rowY = CGFloat(PhotoGridView.rowCount - 1 - row) * rh
+            let rowY = CGFloat(PhotoGridView.rowCount - 1 - row) * (rh + PhotoGridView.gap)
             rowLayer.frame = CGRect(x: 0, y: rowY, width: layout.totalWidth, height: rh)
 
             for cell in layout.cells {
