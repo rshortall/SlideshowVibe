@@ -59,9 +59,10 @@ final class ReflectionView: NSView {
 
         let rowCount = PhotoGridView.rowCount
         let gridH = grid.bounds.height
+        // Use the same row height as the grid — no vertical squashing.
+        // Rows are anchored from the top of the reflection view downward;
+        // row 0 (top of grid) may be clipped at the bottom, which is fine.
         let rh = gridH / CGFloat(rowCount)
-        let scaleY = bounds.height / gridH
-        let reflRH = rh * scaleY
         let contentWidth = grid.rowLayouts.map { $0.totalWidth }.max() ?? 0
 
         CATransaction.begin()
@@ -78,9 +79,10 @@ final class ReflectionView: NSView {
             rowLayer.anchorPoint = .zero
             rowLayer.isOpaque = true
             rowLayer.backgroundColor = NSColor.black.cgColor
-            // Natural reflection: row 2 (bottom of grid) appears at top of reflection (nearest)
-            let rowY = CGFloat(row) * reflRH
-            rowLayer.frame = CGRect(x: 0, y: rowY, width: layout.totalWidth, height: reflRH)
+            // Anchor rows from the top of the reflection view downward.
+            // row 2 (bottom of grid) → top of reflection; row 0 → may clip at bottom.
+            let rowY = bounds.height - CGFloat(rowCount - row) * rh
+            rowLayer.frame = CGRect(x: 0, y: rowY, width: layout.totalWidth, height: rh)
             scrollContainerLayer.addSublayer(rowLayer)
             rowLayersList.append(rowLayer)
 
@@ -100,8 +102,8 @@ final class ReflectionView: NSView {
                 }
 
                 // Use position+bounds (not frame) because the layer has a transform applied
-                cellLayer.position = CGPoint(x: cell.x + cell.width / 2, y: reflRH / 2)
-                cellLayer.bounds   = CGRect(x: 0, y: 0, width: cell.width, height: reflRH)
+                cellLayer.position = CGPoint(x: cell.x + cell.width / 2, y: rh / 2)
+                cellLayer.bounds   = CGRect(x: 0, y: 0, width: cell.width, height: rh)
 
                 rowLayer.addSublayer(cellLayer)
                 cellLayerMap[cell.itemIndex] = cellLayer
