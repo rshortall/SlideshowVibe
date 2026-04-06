@@ -8,6 +8,7 @@ final class ReflectionView: NSView {
     weak var gridView: PhotoGridView?
 
     private let scrollContainerLayer = CALayer()
+    private let coverGradientLayer = CAGradientLayer()
     private var rowLayersList: [CALayer] = []
     private(set) var cellLayerMap: [Int: CALayer] = [:]
 
@@ -22,26 +23,21 @@ final class ReflectionView: NSView {
         scrollContainerLayer.isOpaque = true
         scrollContainerLayer.backgroundColor = NSColor.black.cgColor
         layer?.addSublayer(scrollContainerLayer)
-        setupGradientMask()
+        // Cover gradient: drawn on top of the reflection content using black-to-transparent.
+        // This avoids the offscreen render pass that layer.mask requires.
+        // alpha 0.4 at top → content shows at 60%; alpha 1.0 at bottom → fully hidden.
+        coverGradientLayer.colors = [NSColor(white: 0, alpha: 0.4).cgColor,
+                                     NSColor(white: 0, alpha: 1.0).cgColor]
+        coverGradientLayer.startPoint = CGPoint(x: 0.5, y: 1.0)
+        coverGradientLayer.endPoint   = CGPoint(x: 0.5, y: 0.0)
+        layer?.addSublayer(coverGradientLayer)
     }
 
     required init?(coder: NSCoder) { fatalError() }
 
-    // MARK: Gradient Mask
-
-    private func setupGradientMask() {
-        let mask = CAGradientLayer()
-        // y=1 is top in CALayer coords; fade from semi-opaque at top to clear at bottom
-        mask.colors = [NSColor(white: 1, alpha: 0.6).cgColor,
-                       NSColor(white: 1, alpha: 0.0).cgColor]
-        mask.startPoint = CGPoint(x: 0.5, y: 1.0)
-        mask.endPoint   = CGPoint(x: 0.5, y: 0.0)
-        layer?.mask = mask
-    }
-
     override func layout() {
         super.layout()
-        layer?.mask?.frame = layer?.bounds ?? .zero
+        coverGradientLayer.frame = bounds
         guard let grid = gridView, !grid.rowLayouts.isEmpty, bounds.height > 0 else { return }
         buildLayers(from: grid)
     }
@@ -107,6 +103,44 @@ final class ReflectionView: NSView {
 
                 rowLayer.addSublayer(cellLayer)
                 cellLayerMap[cell.itemIndex] = cellLayer
+            }
+        }
+
+        CATransaction.commit()
+    }
+
+    /// Reposition existing cell layers to match updated grid layout, without rebuilding them.
+    /// Use this when the set of photos is unchanged but aspect ratios or view size have changed.
+    func updateCellFrames(from grid: PhotoGridView) {
+        guard bounds.height > 0, grid.bounds.height > 0, !grid.rowLayouts.isEmpty else { return }
+        guard rowLayersList.count == PhotoGridView.rowCount else {
+            buildLayers(from: grid)
+            return
+        }
+
+        let rowCount = PhotoGridView.rowCount
+        let gridH = grid.bounds.height
+        let gap = PhotoGridView.gap
+        let rh = (gridH - CGFloat(rowCount - 1) * gap) / CGFloat(rowCount)
+        let contentWidth = grid.rowLayouts.map { $0.totalWidth }.max() ?? 0
+
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+
+        scrollContainerLayer.frame = CGRect(x: -grid.scrollOffset, y: 0,
+                                            width: contentWidth, height: bounds.height)
+
+        for row in 0..<rowCount {
+            guard row < grid.rowLayouts.count else { continue }
+            let layout = grid.rowLayouts[row]
+            let rowLayer = rowLayersList[row]
+            let rowY = bounds.height - CGFloat(rowCount - row) * (rh + gap) + gap
+            rowLayer.frame = CGRect(x: 0, y: rowY, width: layout.totalWidth, height: rh)
+
+            for cell in layout.cells {
+                guard let cellLayer = cellLayerMap[cell.itemIndex] else { continue }
+                cellLayer.position = CGPoint(x: cell.x + cell.width / 2, y: rh / 2)
+                cellLayer.bounds = CGRect(x: 0, y: 0, width: cell.width, height: rh)
             }
         }
 

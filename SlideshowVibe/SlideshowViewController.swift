@@ -16,6 +16,10 @@ final class SlideshowViewController: NSViewController {
     private var scrollDirection: CGFloat = 1
     /// Timestamp of last display link callback
     private var lastTimestamp: CVTimeStamp?
+    /// Limits the display link to one pending scroll update on the main queue at a time.
+    /// If the main thread is still processing a previous update when the next tick fires,
+    /// that tick is dropped rather than queued, preventing position double-steps.
+    private let scrollSemaphore = DispatchSemaphore(value: 1)
 
     // MARK: Init
 
@@ -80,7 +84,14 @@ final class SlideshowViewController: NSViewController {
         // When grid layout changes (images load / window resizes), rebuild reflection layers
         gridView.onLayoutChanged = { [weak self] in
             guard let self = self else { return }
-            self.reflectionView.buildLayers(from: self.gridView)
+            // Only do a full rebuild when cells were added/removed.
+            // For aspect-ratio-driven relayouts (very common during image loading),
+            // just reposition existing layers — avoids destroying/recreating hundreds of layers.
+            if self.reflectionView.cellLayerMap.count == self.gridView.photoItems.count {
+                self.reflectionView.updateCellFrames(from: self.gridView)
+            } else {
+                self.reflectionView.buildLayers(from: self.gridView)
+            }
         }
 
         // When an image finishes loading, update the matching reflection cell too
@@ -157,7 +168,9 @@ final class SlideshowViewController: NSViewController {
         }
         lastTimestamp = timestamp
 
+        guard scrollSemaphore.wait(timeout: .now()) == .success else { return }
         DispatchQueue.main.async { [weak self] in
+            defer { self?.scrollSemaphore.signal() }
             self?.updateScroll(dt: dt)
         }
     }

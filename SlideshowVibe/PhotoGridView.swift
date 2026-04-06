@@ -42,6 +42,7 @@ final class PhotoGridView: NSView {
     private var rowIndices: [[Int]] = [[], [], []]
     var rowLayouts: [RowLayout] = []
     private(set) var maxScrollOffset: CGFloat = 0
+    private var loadedImageCount = 0
 
     // MARK: Layer hierarchy
     //   layer (view backing layer)
@@ -91,6 +92,7 @@ final class PhotoGridView: NSView {
     // MARK: Public API
 
     func setImageURLs(_ urls: [URL]) {
+        loadedImageCount = 0
         photoItems = urls.map { PhotoItem(url: $0, image: nil, cgImage: nil, aspectRatio: PhotoGridView.placeholderAspect) }
         rebuildRowIndices()
         rebuildCellLayers()
@@ -116,6 +118,7 @@ final class PhotoGridView: NSView {
                 cellLayer.backgroundColor = nil
             }
             CATransaction.commit()
+            loadedImageCount += 1
             onImageLoaded?(idx, cgImg)
         }
 
@@ -229,7 +232,7 @@ final class PhotoGridView: NSView {
     }
 
     func prefetchAround(offset: CGFloat) {
-        guard bounds.width > 0 else { return }
+        guard bounds.width > 0, loadedImageCount < photoItems.count else { return }
         let prefetchAhead = bounds.width * 2
         for row in 0..<PhotoGridView.rowCount {
             guard row < rowLayouts.count else { continue }
