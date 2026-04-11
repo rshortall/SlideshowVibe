@@ -10,8 +10,10 @@ final class SlideshowViewController: NSViewController {
     private var reflectionView: ReflectionView!
     private var displayLink: CVDisplayLink?
 
+    private let config = Config.load()
+
     /// Scroll speed in points per second
-    private let scrollSpeed: CGFloat = 40
+    private var scrollSpeed: CGFloat { CGFloat(config.scrollSpeed) }
     /// Direction: +1 = scrolling right (offset increases), -1 = scrolling left
     private var scrollDirection: CGFloat = 1
     /// Timestamp of last display link callback
@@ -111,7 +113,8 @@ final class SlideshowViewController: NSViewController {
     private func loadImages() {
         DispatchQueue.global(qos: .userInitiated).async { [weak self] in
             guard let self = self else { return }
-            let urls = ImageLoader.shared.collectImageURLs(in: self.folderURL)
+            let all  = ImageLoader.shared.collectImageURLs(in: self.folderURL)
+            let urls = Array(all.shuffled().prefix(self.config.maxImages))
             DispatchQueue.main.async {
                 if urls.isEmpty {
                     self.showNoImagesAlert()

@@ -13,6 +13,7 @@
 		A1000004 /* PhotoGridView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000004 /* PhotoGridView.swift */; };
 		A1000005 /* ReflectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000005 /* ReflectionView.swift */; };
 		A1000006 /* ImageLoader.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000006 /* ImageLoader.swift */; };
+		A1000008 /* Config.swift in Sources */ = {isa = PBXBuildFile; fileRef = A2000008 /* Config.swift */; };
 		A1000007 /* Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = A2000007 /* Info.plist */; };
 /* End PBXBuildFile section */
 
@@ -23,6 +24,7 @@
 		A2000004 /* PhotoGridView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhotoGridView.swift; sourceTree = "<group>"; };
 		A2000005 /* ReflectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReflectionView.swift; sourceTree = "<group>"; };
 		A2000006 /* ImageLoader.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ImageLoader.swift; sourceTree = "<group>"; };
+		A2000008 /* Config.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Config.swift; sourceTree = "<group>"; };
 		A2000007 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A3000001 /* SlideshowVibe.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SlideshowVibe.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -47,6 +49,7 @@
 				A2000004 /* PhotoGridView.swift */,
 				A2000005 /* ReflectionView.swift */,
 				A2000006 /* ImageLoader.swift */,
+				A2000008 /* Config.swift */,
 				A2000007 /* Info.plist */,
 			);
 			path = SlideshowVibe;
@@ -137,6 +140,7 @@
 				A1000004 /* PhotoGridView.swift in Sources */,
 				A1000005 /* ReflectionView.swift in Sources */,
 				A1000006 /* ImageLoader.swift in Sources */,
+				A1000008 /* Config.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
