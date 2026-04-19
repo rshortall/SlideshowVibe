@@ -23,6 +23,12 @@ final class SlideshowViewController: NSViewController {
     /// that tick is dropped rather than queued, preventing position double-steps.
     private let scrollSemaphore = DispatchSemaphore(value: 1)
 
+    /// Width constraints updated by applyTiltTransform so the views are physically wider
+    /// than the window — perspective then compresses the extra content into the visible area,
+    /// filling the right-side gap without stretching any images.
+    private var gridWidthConstraint: NSLayoutConstraint!
+    private var reflectionWidthConstraint: NSLayoutConstraint!
+
     // MARK: Init
 
     init(folderURL: URL) {
@@ -71,15 +77,20 @@ final class SlideshowViewController: NSViewController {
         reflectionView.translatesAutoresizingMaskIntoConstraints = false
         container.addSubview(reflectionView)
 
+        // Width starts at the window width; applyTiltTransform widens it so perspective
+        // compression fills the gap on the right without scaling/stretching images.
+        gridWidthConstraint      = gridView.widthAnchor.constraint(equalToConstant: container.bounds.width)
+        reflectionWidthConstraint = reflectionView.widthAnchor.constraint(equalToConstant: container.bounds.width)
+
         NSLayoutConstraint.activate([
             gridView.topAnchor.constraint(equalTo: container.topAnchor),
             gridView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            gridView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            gridWidthConstraint,
             gridView.heightAnchor.constraint(equalTo: container.heightAnchor, multiplier: 0.60),
 
             reflectionView.topAnchor.constraint(equalTo: gridView.bottomAnchor, constant: PhotoGridView.gap),
             reflectionView.leadingAnchor.constraint(equalTo: container.leadingAnchor),
-            reflectionView.trailingAnchor.constraint(equalTo: container.trailingAnchor),
+            reflectionWidthConstraint,
             reflectionView.bottomAnchor.constraint(equalTo: container.bottomAnchor),
         ])
 
@@ -105,7 +116,45 @@ final class SlideshowViewController: NSViewController {
     override func viewDidLayout() {
         super.viewDidLayout()
         gridView.recomputeLayouts()
+        applyTiltTransform()
         // onLayoutChanged fires from recomputeLayouts and rebuilds the reflection
+    }
+
+    /// Applies a Y-axis tilt with perspective to the container's sublayerTransform.
+    /// Rather than scaling the transform (which stretches images), the grid and reflection
+    /// views are made physically wider than the window. Perspective then compresses the
+    /// extra content into the visible area — images keep their correct proportions.
+    private func applyTiltTransform() {
+        guard config.gridTiltAngle != 0 else { return }
+        let angle = CGFloat(config.gridTiltAngle) * .pi / 180
+        let D: CGFloat = 1200          // perspective distance (points)
+        let W = view.bounds.width
+        guard W > 0 else { return }
+
+        // The right edge of the content (at x = contentWidth) must project to x = W.
+        // Solving: contentWidth·cos(θ)/(1 + contentWidth·sin(θ)/D) = W
+        // → contentWidth = W / (cos(θ) − W·sin(θ)/D)
+        let denom = cos(angle) - W * sin(angle) / D
+        guard denom > 0 else { return }
+        let contentWidth = W / denom   // wider than W; no image scaling involved
+
+        gridWidthConstraint.constant      = contentWidth
+        reflectionWidthConstraint.constant = contentWidth
+
+        // Pure perspective + rotation — no X scale, so images are never stretched.
+        var t = CATransform3DIdentity
+        t.m34 = -1.0 / D
+        t = CATransform3DRotate(t, angle, 0, 1, 0)
+
+        // Shift the perspective's y-vanishing line to the visual bottom of the grid so the
+        // bottom row appears horizontal. Without this, depth varies as z = −x·sin(θ), making
+        // y_proj = y/(1 + x·sin(θ)/D) tilt toward y=0 (container bottom) as x increases.
+        // Adding vpY·sin(θ)/D to m12 (the x→y cross-term) shifts the neutral line to vpY:
+        //   y_proj = (y − vpY)/w + vpY  for all x along the bottom row. ✓
+        let vpY = gridView.frame.minY
+        t.m12 += vpY * sin(angle) / D
+
+        view.layer?.sublayerTransform = t
     }
 
     // MARK: Image Loading

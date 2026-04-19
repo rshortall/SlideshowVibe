@@ -5,6 +5,9 @@ struct Config {
     var scrollSpeed: Double = 40
     /// Maximum number of images randomly selected from the chosen folder.
     var maxImages: Int = 500
+    /// Y-axis tilt of the entire grid in degrees. Positive values rotate the left side
+    /// toward the viewer (appearing larger) and the right side away (appearing smaller).
+    var gridTiltAngle: Double = 20
 
     /// Load config from ~/Library/Application Support/SlideshowVibe/config.json.
     /// Creates the file with defaults on first run so users know where to find it.
@@ -22,8 +25,15 @@ struct Config {
         else { return defaults }
 
         var config = Config()
-        if let v = json["scrollSpeed"] as? Double { config.scrollSpeed = max(1, v) }
-        if let v = json["maxImages"] as? Int      { config.maxImages   = max(1, v) }
+        if let v = json["scrollSpeed"]   as? Double { config.scrollSpeed   = max(1, v) }
+        if let v = json["maxImages"]     as? Int    { config.maxImages     = max(1, v) }
+        if let v = json["gridTiltAngle"] as? Double { config.gridTiltAngle = v }
+
+        // Write back so any keys added since the file was first created appear in it.
+        let knownKeys: Set<String> = ["scrollSpeed", "maxImages", "gridTiltAngle"]
+        if !knownKeys.isSubset(of: json.keys) {
+            writeDefaults(to: url, config: config)
+        }
         return config
     }
 
@@ -37,8 +47,9 @@ struct Config {
     private static func writeDefaults(to url: URL, config: Config) {
         let dir = url.deletingLastPathComponent()
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
-        let json: [String: Any] = ["scrollSpeed": config.scrollSpeed,
-                                   "maxImages":   config.maxImages]
+        let json: [String: Any] = ["scrollSpeed":   config.scrollSpeed,
+                                   "maxImages":     config.maxImages,
+                                   "gridTiltAngle": config.gridTiltAngle]
         if let data = try? JSONSerialization.data(withJSONObject: json,
                                                   options: .prettyPrinted) {
             try? data.write(to: url)

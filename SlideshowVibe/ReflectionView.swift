@@ -37,7 +37,9 @@ final class ReflectionView: NSView {
 
     override func layout() {
         super.layout()
-        coverGradientLayer.frame = bounds
+        // Extend 8 pts below bounds so sub-pixel flickering at the very bottom is fully masked.
+        coverGradientLayer.frame = CGRect(x: bounds.minX, y: bounds.minY - 8,
+                                          width: bounds.width, height: bounds.height + 8)
         guard let grid = gridView, !grid.rowLayouts.isEmpty, bounds.height > 0 else { return }
         buildLayers(from: grid)
     }
