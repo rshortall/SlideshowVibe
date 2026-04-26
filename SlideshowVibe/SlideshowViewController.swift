@@ -12,8 +12,13 @@ final class SlideshowViewController: NSViewController {
 
     private let config = Config.load()
 
-    /// Scroll speed in points per second
-    private var scrollSpeed: CGFloat { CGFloat(config.scrollSpeed) }
+    /// Scroll speed in points per second (adjustable via +/- keys)
+    private var scrollSpeed: CGFloat = 40
+    /// Amount to change scroll speed per key press
+    private static let scrollSpeedStep: CGFloat = 10
+    /// Minimum and maximum scroll speed
+    private static let scrollSpeedMin: CGFloat = 10
+    private static let scrollSpeedMax: CGFloat = 200
     /// Direction: +1 = scrolling right (offset increases), -1 = scrolling left
     private var scrollDirection: CGFloat = 1
     /// Timestamp of last display link callback
@@ -49,6 +54,7 @@ final class SlideshowViewController: NSViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        scrollSpeed = CGFloat(config.scrollSpeed)
         setupViews()
         loadImages()
     }
@@ -56,6 +62,7 @@ final class SlideshowViewController: NSViewController {
     override func viewDidAppear() {
         super.viewDidAppear()
         startDisplayLink()
+        view.window?.makeFirstResponder(self)
     }
 
     override func viewWillDisappear() {
@@ -251,5 +258,25 @@ final class SlideshowViewController: NSViewController {
         CATransaction.commit()
 
         gridView.prefetchAround(offset: offset)
+    }
+
+    // MARK: Keyboard
+
+    override var acceptsFirstResponder: Bool { true }
+
+    override func keyDown(with event: NSEvent) {
+        guard let chars = event.charactersIgnoringModifiers else {
+            super.keyDown(with: event)
+            return
+        }
+
+        switch chars {
+        case "+", "=":
+            scrollSpeed = min(scrollSpeed + Self.scrollSpeedStep, Self.scrollSpeedMax)
+        case "-", "_":
+            scrollSpeed = max(scrollSpeed - Self.scrollSpeedStep, Self.scrollSpeedMin)
+        default:
+            super.keyDown(with: event)
+        }
     }
 }
